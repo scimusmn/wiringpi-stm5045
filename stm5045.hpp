@@ -1,3 +1,5 @@
+/** @file stm5045.hpp */
+
 #ifndef STM5045_H
 #define STM5045_H
 
@@ -8,12 +10,21 @@
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+/** A little class to make dealing with wiringPi pins a bit nicer. */
 class outputPin {
 private:
   unsigned int m_pinNumber;
   unsigned int m_pinState;
 
 public:
+  /** (constructor)
+   *
+   * This function calls pinMode() so you _must_ call wiringPiSetup() 
+   * before this constructor.
+   *
+   * @param pinNumber the wiringPi pin number the object should control
+   * @param initialState the desired initial state of the pin (HIGH or LOW)
+   */
   outputPin(unsigned int pinNumber, unsigned int initialState) {
     m_pinNumber = pinNumber;
     m_pinState = initialState;
@@ -21,11 +32,19 @@ public:
     digitalWrite(m_pinNumber, m_pinState);
   }
 
+  /** Set the pin state
+   *
+   * @param state the desired pin state (HIGH or LOW)
+   */
   void set(unsigned int state) {
     m_pinState = state;
     digitalWrite(m_pinNumber, m_pinState);
   }
 
+  /** Toggle the pin
+   *
+   * If the pin is HIGH go LOW, and vice versa.
+   */
   void toggle() {
     if (m_pinState != 0) {
       m_pinState = 0;
