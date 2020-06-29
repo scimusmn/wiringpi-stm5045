@@ -166,7 +166,8 @@ public:
   /** @brief Update the motor
    *
    * This function should be called as often as possible. Introducing delays elsewhere in 
-   * the program will cause the motor to stop.
+   * the program will cause the motor to stop. If you'd like to introduce delays elsewhere,
+   * call this function continuously in another thread.
    */
   void update() {
     std::chrono::time_point<std::chrono::steady_clock> currentTime = std::chrono::steady_clock::now();
