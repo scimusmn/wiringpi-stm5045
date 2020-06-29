@@ -10,14 +10,15 @@
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-/** A little class to make dealing with wiringPi pins a bit nicer. */
+/** @brief A little class to make dealing with wiringPi pins a bit nicer. 
+*/
 class outputPin {
 private:
   unsigned int m_pinNumber;
   unsigned int m_pinState;
 
 public:
-  /** (constructor)
+  /** @brief (constructor)
    *
    * This function calls pinMode() so you _must_ call wiringPiSetup() 
    * before this constructor.
@@ -32,7 +33,7 @@ public:
     digitalWrite(m_pinNumber, m_pinState);
   }
 
-  /** Set the pin state
+  /** @brief Set the pin state
    *
    * @param state the desired pin state (HIGH or LOW)
    */
@@ -41,7 +42,7 @@ public:
     digitalWrite(m_pinNumber, m_pinState);
   }
 
-  /** Toggle the pin
+  /** @brief Toggle the pin
    *
    * If the pin is HIGH go LOW, and vice versa.
    */
@@ -59,6 +60,8 @@ public:
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+/** @brief Class for operating an ST-M5045 driver
+ */
 class stm5045 {
 private:
   outputPin m_pulse, m_direction, m_enable;
@@ -77,8 +80,29 @@ private:
   }
 
 public:
-  bool moving, accelerating;
-  
+  /** @brief Whether or not the motor is currently moving.
+   *
+   * Set to TRUE to move; set to FALSE to stop.
+   */
+  bool moving;
+
+  /** @brief Whether or not the motor is currently accelerating.
+   *
+   * After setting move to TRUE, set this to TRUE as well to force acceleration to the target velocity.
+   */
+  bool accelerating;
+
+  /** @brief (constructor)
+   *
+   * This constructor initializes outputPin objects, which requires you to call wiringPiSetup() before
+   * calling this.
+   *
+   * @param pulsePin The wiringPi number of the pin connected to the PUL signal
+   * @param directionPin The wiringPi number of the pin connected to the DIR signal
+   * @param enablePin The wiringPi number of the pin connected to the ENA signal
+   * @param pulsesPerRevolution the number of pulses per shaft revolution
+   * @param angularVelocity The inital angular velocity of the motor
+   */
   stm5045(unsigned int pulsePin,
           unsigned int directionPin,
           unsigned int enablePin,
@@ -97,27 +121,53 @@ public:
 
   // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+  /** @brief Set the motor angular velocity
+   *
+   * This function is immediate, and will not accelerate to the supplied angular velocity.
+   *
+   * @param angularVelocity The new angular velocity
+   */
   void setVelocity(float angularVelocity) {
     m_angularVelocity = angularVelocity;
     updatePulseSpacing();
   }
 
+  /** @brief Set the motor target angular velocity
+   *
+   * The target angular velocity is the speed the motor will spin up or down if
+   * *accelerating* is set to TRUE.
+   *
+   * @param targetAngularVelocity the target angular velocity
+   */
   void setTargetVelocity(float targetAngularVelocity) {
     m_targetAngularVelocity = targetAngularVelocity;
   }
 
+  /** @brief Set the motor angular acceleration
+   *
+   * This is just the absolute value of the acceleration; if a positive or negative change is
+   * required, the sign is flipped automatically.
+   *
+   * @param angularAcceleration the absolute value of the motor's acceleration
+   */
   void setAcceleration(float angularAcceleration) {
     m_angularAcceleration = angularAcceleration;
   }
 
   // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+  /** @brief Advance one step */
   void step() {
     m_pulse.toggle();
   }
 
   // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+  /** @brief Update the motor
+   *
+   * This function should be called as often as possible. Introducing delays elsewhere in 
+   * the program will cause the motor to stop.
+   */
   void update() {
     std::chrono::time_point<std::chrono::steady_clock> currentTime = std::chrono::steady_clock::now();
     std::chrono::duration<double> dt = currentTime - m_prevTime;
