@@ -4,6 +4,7 @@
 #define STM5045_H
 
 #include <chrono>
+#include <cmath>
 #include <iostream>
 
 #define PI 3.141592
@@ -42,6 +43,14 @@ public:
     digitalWrite(m_pinNumber, m_pinState);
   }
 
+  /** @brief Get current pin state
+   *
+   * @return Current pin state (HIGH or LOW)
+   */
+  int getState() {
+    return m_pinState;
+  }
+
   /** @brief Toggle the pin
    *
    * If the pin is HIGH go LOW, and vice versa.
@@ -71,12 +80,14 @@ private:
 
   unsigned int m_pulsesPerRevolution;
 
+  float m_angle;
+  int m_steps;
   float m_angularVelocity;
   float m_targetAngularVelocity;
   float m_angularAcceleration;
 
   void updatePulseSpacing() {
-    m_pulseSpacing = (PI/(m_angularVelocity * m_pulsesPerRevolution)) * std::chrono::seconds(1);
+    m_pulseSpacing = (PI/(abs(m_angularVelocity) * m_pulsesPerRevolution)) * std::chrono::seconds(1);
   }
 
 public:
@@ -121,21 +132,49 @@ public:
 
   // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+  /** @brief Set the current steps
+   *
+   * This function is typically used for zeroing.
+   *
+   * @param steps What to set steps to.
+   */
+  void setSteps(int steps = 0) {
+    m_steps = steps;
+  }
+
+  /** @brief Set the current angle
+   *
+   * This function is typically used for zeroing.
+   *
+   * @param angle What to set the current angle to
+   */
+  void setAngle(float angle = 0) {
+    m_angle = angle;
+  }
+
   /** @brief Set the motor angular velocity
    *
    * This function is immediate, and will not accelerate to the supplied angular velocity.
+   * Positive angular velocity is counter-clockwise; negative is clockwise.
    *
-   * @param angularVelocity The new angular velocity
+   * @param angularVelocity The new angular velocity in radians per second
    */
   void setVelocity(float angularVelocity) {
     m_angularVelocity = angularVelocity;
+    if (m_angularVelocity < 0) {
+      m_direction.set(1);
+    }
+    else {
+      m_direction.set(0);
+    }
     updatePulseSpacing();
   }
 
   /** @brief Set the motor target angular velocity
    *
-   * The target angular velocity is the speed the motor will spin up or down if
-   * *accelerating* is set to TRUE.
+   * The target angular velocity is the speed (in radians per second) 
+   * the motor will spin up or down if accelerating is set to TRUE.
+   * Positive angular velocity is counter-clockwise; negative is clockwise.
    *
    * @param targetAngularVelocity the target angular velocity
    */
@@ -159,6 +198,40 @@ public:
   /** @brief Advance one step */
   void step() {
     m_pulse.toggle();
+    int sign = 1;
+    if (m_direction.getState() != 0) {
+      sign = -1;
+    }
+
+    m_steps += sign;
+    m_angle += sign * 2*PI/m_pulsesPerRevolution;
+  }
+
+  // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+  /** @brief Get current steps
+   *
+   * @return Current steps away from zero (positive for net counter-clockwise movement,
+   * negative for net clockwise movement).
+   */
+  float getSteps() {
+    return m_steps;
+  }
+
+  /** @brief Get the current angle
+   *
+   * @return The current angle in radians.
+   */
+  float getAngle() {
+    return m_angle;
+  }
+
+  /** @brief Get the current angular velocity
+   *
+   * @return The current angular velocity in radians per second
+   */
+  float getVelocity() {
+    return m_angularVelocity;
   }
 
   // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -172,21 +245,21 @@ public:
   void update() {
     std::chrono::time_point<std::chrono::steady_clock> currentTime = std::chrono::steady_clock::now();
     std::chrono::duration<double> dt = currentTime - m_prevTime;
-    
+
     if (moving) {
       m_pulseTime += dt;
 
       if (m_pulseTime > m_pulseSpacing) {
         m_pulseTime -= m_pulseSpacing;
-        m_pulse.toggle();
+        step();
       }
       if (accelerating) {
         float velocityStep = m_angularAcceleration * dt.count();
         if (m_angularVelocity < m_targetAngularVelocity) {
-          m_angularVelocity += velocityStep;
+          setVelocity(m_angularVelocity + velocityStep);
         }
         else {
-          m_angularVelocity -= velocityStep;
+          setVelocity(m_angularVelocity - velocityStep);
         }
         
         if (abs(m_angularVelocity - m_targetAngularVelocity) < velocityStep) {
