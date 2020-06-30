@@ -8,11 +8,9 @@ const unsigned int enable = 0;
 int main() {
   wiringPiSetup();
 
-  stm5045 motor(pulse, direction, enable, 6400, 0);
-  motor.setTargetVelocity(-2*PI);
-  motor.setAcceleration(1);
+  stm5045 motor(pulse, direction, enable, 6400, -2*PI);
   motor.moving = true;
-  motor.accelerating = true;
+  motor.enable();
   
   for(;;) {
     motor.update();

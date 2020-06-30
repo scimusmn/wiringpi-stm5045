@@ -125,7 +125,7 @@ public:
       m_pulseTime(0)
   {
     m_pulsesPerRevolution = pulsesPerRevolution;
-    m_angularVelocity = angularVelocity;
+    setVelocity(angularVelocity);
     updatePulseSpacing();
     m_prevTime = std::chrono::steady_clock::now();
   }
@@ -193,6 +193,22 @@ public:
     m_angularAcceleration = angularAcceleration;
   }
 
+  /** @brief Enable the motor
+   *
+   * This will lock the motor in place when not moving, and allow it to rotate normally.
+   */
+  void enable() {
+    m_enable.set(1);
+  }
+
+  /** @brief Disable the motor
+   *
+   * This will allow the motor to rotate freely and will stop it from rotating.
+   */
+  void disable() {
+    m_enable.set(0);
+  }
+
   // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
   /** @brief Advance one step */
@@ -234,6 +250,15 @@ public:
     return m_angularVelocity;
   }
 
+  /** @brief Check if the motor is enabled
+   *
+   * @return True if the motor is enabled; false otherwise.
+   */
+  bool isEnabled() {
+    if (m_enable.getState() == 0) { return false; }
+    return true;
+  }
+
   // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
   /** @brief Update the motor
@@ -246,7 +271,7 @@ public:
     std::chrono::time_point<std::chrono::steady_clock> currentTime = std::chrono::steady_clock::now();
     std::chrono::duration<double> dt = currentTime - m_prevTime;
 
-    if (moving) {
+    if (moving && isEnabled()) {
       m_pulseTime += dt;
 
       if (m_pulseTime > m_pulseSpacing) {
